@@ -299,8 +299,7 @@ public class EditorActivity extends AppCompatActivity implements LoaderManager.L
         if (cursor == null || cursor.getCount() < 1) {
             return;
         }
-
-         if (cursor.moveToFirst()) {
+        if (cursor.moveToFirst()) {
        // while (cursor.moveToNext()){
             // Find the columns of pet attributes that we're interested in
             int nameColumnIndex = cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_NAME);
