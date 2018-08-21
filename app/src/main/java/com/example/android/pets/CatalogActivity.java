@@ -16,6 +16,7 @@
 package com.example.android.pets;
 
 import android.app.LoaderManager;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
@@ -30,16 +31,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.TextView;
 import com.example.android.pets.Data.PetContract.PetEntry;
 import com.example.android.pets.Data.PetDbHelper;
+
 
 /**
  * Displays list of pets that were entered and stored in the app.
  */
-public class CatalogActivity extends AppCompatActivity implements
-        android.support.v4.app.LoaderManager.LoaderCallbacks<Cursor>{
+public class CatalogActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     private PetDbHelper mDbHelper;
 
@@ -62,17 +63,30 @@ public class CatalogActivity extends AppCompatActivity implements
             }
         });
         mDbHelper = new PetDbHelper(this);
-        displayDatabaseInfo();
+        ListView petListView = (ListView) findViewById(R.id.listView);
 
-    }
+        // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
+        // View rỗng
+        View emptyView = findViewById(R.id.empty_view);
+        petListView.setEmptyView(emptyView);
 
-    /**
-     * Sau khi người dùng rời khỏi activity và quay lại thì hiển thị lại danh sách mới
-     */
-    @Override
-    protected void onStart() {
-        super.onStart();
-        displayDatabaseInfo();
+        mPetCursorAdapter = new PetCursorAdapter(this, null);
+        petListView.setAdapter(mPetCursorAdapter);
+        petListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                Intent intent = new Intent(CatalogActivity.this, EditorActivity.class);
+                // For example: the URI would be "content://com.example.android.pets/pets/2"
+                // if the pet with ID = 2 was clicked on .
+                Uri currentPetURI = ContentUris.withAppendedId(PetEntry.CONTENT_URI, id);
+                // Set the URI on the data of the intent
+                intent.setData(currentPetURI);
+                startActivity(intent);
+            }
+        });
+
+        // Kick off the loader
+        getLoaderManager().initLoader(PET_LOADER, null, this);
     }
 
     @Override
@@ -90,14 +104,19 @@ public class CatalogActivity extends AppCompatActivity implements
             // Respond to a click on the "Insert dummy data" menu option
             case R.id.action_insert_dummy_data:
                 insertPet();
-                displayDatabaseInfo();
                 return true;
             // Respond to a click on the "Delete all entries" menu option
             case R.id.action_delete_all_entries:
                 // Do nothing for now
+                deleteAllPets();
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void deleteAllPets() {
+        int rowsDeleted = getContentResolver().delete(PetEntry.CONTENT_URI, null, null);
+        Log.v("CatalogActivity", rowsDeleted + " rows deleted from pet database");
     }
 
     private void insertPet() {
@@ -112,53 +131,39 @@ public class CatalogActivity extends AppCompatActivity implements
         Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI, ct);
     }
 
-    private void displayDatabaseInfo() {
-        //Column
-        String projection [] = { PetEntry._ID,
-                PetEntry.COLUMN_PET_NAME,
-                PetEntry.COLUMN_PET_BREED,
-                PetEntry.COLUMN_PET_GENDER,
-                PetEntry.COLUMN_PET_WEIGHT
-        };
 
-        Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI, projection, null, null, null);
-
-        ListView petListView = (ListView) findViewById(R.id.listView);
-
-        // Find and set empty view on the ListView, so that it only shows when the list has 0 items.
-        // View rỗng
-        View emptyView = findViewById(R.id.empty_view);
-        petListView.setEmptyView(emptyView);
-
-        mPetCursorAdapter = new PetCursorAdapter(this, cursor);
-        petListView.setAdapter(mPetCursorAdapter);
-
-    }
 
     @Override
-    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+    public android.content.Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
         String projection [] = {
                 PetEntry._ID,
                 PetEntry.COLUMN_PET_NAME,
                 PetEntry.COLUMN_PET_BREED,
         };
-        return new CursorLoader(this,
+        // load data (query method )
+        return new android.content.CursorLoader(this,
                 PetEntry.CONTENT_URI,
                 projection,
                 null,
                 null,
                 null);
+        //    Cursor cursor = getContentResolver().query(PetEntry.CONTENT_URI, projection, null, null, null);
+
     }
 
     @Override
-    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+    public void onLoadFinished(android.content.Loader<Cursor> loader, Cursor data) {
         // Update {@link PetCursorAdapter} with this new Cursor containing updated pet data
         mPetCursorAdapter.swapCursor(data);
     }
 
     @Override
-    public void onLoaderReset(Loader<Cursor> loader) {
+    public void onLoaderReset(android.content.Loader<Cursor> loader) {
         // Callback called when the data needs to be deleted
+        // Xóa đi dữ liệu cũ (thừa)
         mPetCursorAdapter.swapCursor(null);
     }
+
+
+
 }
